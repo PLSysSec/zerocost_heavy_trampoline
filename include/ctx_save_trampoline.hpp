@@ -32,12 +32,8 @@ private:
   {
     uint64_t val = 0;
     // memcpy will be removed by any decent compiler
-    if constexpr (sizeof(T_Arg) == 8) {
+    if constexpr (sizeof(T_Arg) <= 8) {
       memcpy(&val, &arg, sizeof(T_Arg));
-    } else if constexpr (sizeof(T_Arg) == 4) {
-      uint32_t tmp = 0;
-      memcpy(&tmp, &arg, sizeof(T_Arg));
-      val = tmp;
     } else {
       static_assert(switch_execution_detail::false_v<T_Arg>,
                     "Unknown serialization size");
