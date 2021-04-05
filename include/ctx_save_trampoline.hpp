@@ -208,6 +208,10 @@ public:
     transition_in.stack_params_size = stack_param_size;
     transition_in.target_prog_ctr = (uintptr_t)fn_ptr;
 
+    // floating point state
+    transition_in.target_mxcsr = 0x1f80;
+    transition_in.target_fcw = 0x37f;
+
     switch_execution_context(&transition_in);
     saved_transition_context = prev_transition_context;
 
