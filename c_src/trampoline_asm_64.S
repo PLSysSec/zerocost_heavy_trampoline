@@ -98,14 +98,14 @@ switch_execution_context_only_reg_params:
 
         // Clear non parameter gpr registers to prevents leaks
         // xor also leaves eflags in a fixed known state, so no leaks through this
-        xor     %rax, %rax
-        xor     %rbx, %rbx
+        xorq    %rax, %rax
+        xorq    %rbx, %rbx
         // REG_PARAM specific: Disable r11 clear as it is being used for REG_PARAM
-        // xor     %r11, %r11
-        xor     %r12, %r12
-        xor     %r13, %r13
-        xor     %r14, %r14
-        xor     %r15, %r15
+        // xorq    %r11, %r11
+        xorq    %r12, %r12
+        xorq    %r13, %r13
+        xorq    %r14, %r14
+        xorq    %r15, %r15
         // Clear direction flag before call or return
         cld
         // Clear the x87, MMX, and SSE state.
@@ -229,7 +229,7 @@ switch_execution_context_out_non_windows:
         movq    TRANSITION_CONTEXT_OFFSET_RDX(REG_PARAM), %rdx
         movsd   TRANSITION_CONTEXT_OFFSET_XMM0(REG_PARAM), %xmm0
 
-        // REG_PARAM specific: Delayed r11 now
+        // REG_PARAM specific: Delayed r11 clear now
         xorq    %r11, %r11
 
         ret
