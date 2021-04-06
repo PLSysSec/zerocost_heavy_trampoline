@@ -10,6 +10,10 @@
 
 #include "ctx_save_trampoline_internal.hpp"
 
+#if !defined(__x86_64__) && !defined(__i386__)
+#error "Unknown architecture"
+#endif
+
 namespace switch_execution_detail {
 
 template <typename T> constexpr bool false_v = false;
@@ -101,6 +105,8 @@ private:
                   T_ActualArgs &&...args) {
     T_FormalArg arg_conv = arg;
 
+#if defined(__x86_64__)
+
     if constexpr (std::is_integral_v<T_FormalArg> ||
                   std::is_pointer_v<T_FormalArg> ||
                   std::is_reference_v<T_FormalArg> ||
@@ -164,7 +170,9 @@ private:
           ctx, target_buffer, target_buffer_used_size,
           reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
           std::forward<T_ActualArgs>(args)...);
-    } else {
+    } else
+  #endif
+    {
       memcpy(target_buffer, &arg_conv, sizeof(arg_conv));
       target_buffer += sizeof(arg_conv);
       target_buffer_used_size += sizeof(arg_conv);
@@ -261,24 +269,39 @@ public:
 
     if constexpr (std::is_same_v<T_Ret, float> ||
                   std::is_same_v<T_Ret, double>) {
-      T_Ret ret = 0;
-      memcpy(&ret, &transition_in.xmm0, sizeof(ret));
-      return ret;
+      #if defined(__x86_64__)
+        T_Ret ret = 0;
+        memcpy(&ret, &transition_in.xmm0, sizeof(ret));
+        return ret;
+      #else
+        double ret = 0;
+        memcpy(&ret, &transition_in.st0, sizeof(ret));
+        T_Ret ret_conv = ret;
+        return ret_conv;
+      #endif
     } else if constexpr (std::is_same_v<T_Ret, void>) {
       return;
-    } else if constexpr (sizeof(T_Ret) > 16) {
+    } else if constexpr (sizeof(T_Ret) > sizeof(uintptr_t)) {
       // Should not occur as class returns have already been handled
       static_assert(switch_execution_detail::false_v<T_Ret>,
                     "Class return handling error");
       abort();
-    } else if constexpr (sizeof(T_Ret) > 8 && sizeof(T_Ret) <= 16) {
-      uint64_t result[] = {transition_in.rax, transition_in.rdx};
+    } else if constexpr (sizeof(T_Ret) > sizeof(uintptr_t) && sizeof(T_Ret) <= 2*sizeof(uintptr_t)) {
+      #if defined(__x86_64__)
+        uint64_t result[] = {transition_in.rax, transition_in.rdx};
+      #else
+        uint32_t result[] = {transition_in.eax, transition_in.edx};
+      #endif
       T_Ret ret;
-      memcpy(&ret, result, sizeof(result));
+      memcpy(&ret, result, sizeof(ret));
       return ret;
     } else {
-      static_assert(sizeof(T_Ret) <= 8);
-      return (T_Ret)transition_in.rax;
+      static_assert(sizeof(T_Ret) <= sizeof(uintptr_t));
+      #if defined(__x86_64__)
+        return (T_Ret)transition_in.rax;
+      #else
+        return (T_Ret)transition_in.eax;
+      #endif
     }
   }
 
