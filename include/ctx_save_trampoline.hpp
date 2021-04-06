@@ -12,78 +12,67 @@
 
 namespace switch_execution_detail {
 
-template<typename T>
-constexpr bool false_v = false;
+template <typename T> constexpr bool false_v = false;
 
-  ///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
 
-  // https://stackoverflow.com/questions/6512019/can-we-get-the-type-of-a-lambda-argument
-  namespace return_argument_detail {
-    template<typename Ret, typename... Rest>
-    Ret helper(Ret (*)(Rest...));
+// https://stackoverflow.com/questions/6512019/can-we-get-the-type-of-a-lambda-argument
+namespace return_argument_detail {
+template <typename Ret, typename... Rest> Ret helper(Ret (*)(Rest...));
 
-    template<typename Ret, typename F, typename... Rest>
-    Ret helper(Ret (F::*)(Rest...));
+template <typename Ret, typename F, typename... Rest>
+Ret helper(Ret (F::*)(Rest...));
 
-    template<typename Ret, typename F, typename... Rest>
-    Ret helper(Ret (F::*)(Rest...) const);
+template <typename Ret, typename F, typename... Rest>
+Ret helper(Ret (F::*)(Rest...) const);
 
-    template<typename F>
-    decltype(helper(&F::operator())) helper(F);
-  } // namespace return_argument_detail
+template <typename F> decltype(helper(&F::operator())) helper(F);
+} // namespace return_argument_detail
 
-  template<typename T>
-  using return_argument =
+template <typename T>
+using return_argument =
     decltype(return_argument_detail::helper(std::declval<T>()));
 
 ///////////////////////////////////////////////////////////////
 
-  namespace prepend_arg_type_detail {
-    template<typename T, typename T_ArgNew>
-    struct helper;
+namespace prepend_arg_type_detail {
+template <typename T, typename T_ArgNew> struct helper;
 
-    template<typename T_ArgNew, typename T_Ret, typename... T_Args>
-    struct helper<T_Ret(T_Args...), T_ArgNew>
-    {
-      using type = T_Ret(T_ArgNew, T_Args...);
-    };
-  }
+template <typename T_ArgNew, typename T_Ret, typename... T_Args>
+struct helper<T_Ret(T_Args...), T_ArgNew> {
+  using type = T_Ret(T_ArgNew, T_Args...);
+};
+} // namespace prepend_arg_type_detail
 
-  template<typename T_Func, typename T_ArgNew>
-  using prepend_arg_type =
+template <typename T_Func, typename T_ArgNew>
+using prepend_arg_type =
     typename prepend_arg_type_detail::helper<T_Func, T_ArgNew>::type;
 
-  ///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
 
-  namespace change_return_type_detail {
-    template<typename T, typename T_RetNew>
-    struct helper;
+namespace change_return_type_detail {
+template <typename T, typename T_RetNew> struct helper;
 
-    template<typename T_RetNew, typename T_Ret, typename... T_Args>
-    struct helper<T_Ret(T_Args...), T_RetNew>
-    {
-      using type = T_RetNew(T_Args...);
-    };
-  }
+template <typename T_RetNew, typename T_Ret, typename... T_Args>
+struct helper<T_Ret(T_Args...), T_RetNew> {
+  using type = T_RetNew(T_Args...);
+};
+} // namespace change_return_type_detail
 
-  template<typename T_Func, typename T_RetNew>
-  using change_return_type =
+template <typename T_Func, typename T_RetNew>
+using change_return_type =
     typename change_return_type_detail::helper<T_Func, T_RetNew>::type;
+} // namespace switch_execution_detail
+
+extern "C" {
+void switch_execution_context(TransitionContext *transition);
 }
 
-extern "C"
-{
-  void switch_execution_context(TransitionContext* transition);
-}
-
-class heavy_trampoline
-{
+class heavy_trampoline {
 
 private:
-
-  template<typename T_Arg>
-  static inline uint64_t serialize_to_uint64(T_Arg arg)
-  {
+  template <typename T_Arg>
+  static inline uint64_t serialize_to_uint64(T_Arg arg) {
     uint64_t val = 0;
     // memcpy will be removed by any decent compiler
     if constexpr (sizeof(T_Arg) <= 8) {
@@ -95,29 +84,21 @@ private:
     return val;
   }
 
-  template<size_t T_IntegerNum, size_t T_FloatNum, typename T_Ret>
-  static inline size_t push_parameters(TransitionContext* ctx,
-                                     char* target_buffer,
-                                     size_t target_buffer_used_size,
-                                     T_Ret (*)())
-  {
+  template <size_t T_IntegerNum, size_t T_FloatNum, typename T_Ret>
+  static inline size_t
+  push_parameters(TransitionContext *ctx, char *target_buffer,
+                  size_t target_buffer_used_size, T_Ret (*)()) {
     return target_buffer_used_size;
   }
 
-  template<size_t T_IntegerNum,
-           size_t T_FloatNum,
-           typename T_Ret,
-           typename T_FormalArg,
-           typename... T_FormalArgs,
-           typename T_ActualArg,
-           typename... T_ActualArgs>
-  static inline size_t push_parameters(TransitionContext* ctx,
-                                     char* target_buffer,
-                                     size_t target_buffer_used_size,
-                                     T_Ret (*)(T_FormalArg, T_FormalArgs...),
-                                     T_ActualArg&& arg,
-                                     T_ActualArgs&&... args)
-  {
+  template <size_t T_IntegerNum, size_t T_FloatNum, typename T_Ret,
+            typename T_FormalArg, typename... T_FormalArgs,
+            typename T_ActualArg, typename... T_ActualArgs>
+  static inline size_t
+  push_parameters(TransitionContext *ctx, char *target_buffer,
+                  size_t target_buffer_used_size,
+                  T_Ret (*)(T_FormalArg, T_FormalArgs...), T_ActualArg &&arg,
+                  T_ActualArgs &&...args) {
     T_FormalArg arg_conv = arg;
 
     if constexpr (std::is_integral_v<T_FormalArg> ||
@@ -147,11 +128,9 @@ private:
       }
 
       return push_parameters<T_IntegerNum + 1, T_FloatNum>(
-        ctx,
-        target_buffer,
-        target_buffer_used_size,
-        reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
-        std::forward<T_ActualArgs>(args)...);
+          ctx, target_buffer, target_buffer_used_size,
+          reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
+          std::forward<T_ActualArgs>(args)...);
 
     } else if constexpr (std::is_same_v<T_FormalArg, float> ||
                          std::is_same_v<T_FormalArg, double>) {
@@ -182,35 +161,30 @@ private:
       }
 
       return push_parameters<T_IntegerNum, T_FloatNum + 1>(
-        ctx,
-        target_buffer,
-        target_buffer_used_size,
-        reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
-        std::forward<T_ActualArgs>(args)...);
+          ctx, target_buffer, target_buffer_used_size,
+          reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
+          std::forward<T_ActualArgs>(args)...);
     } else {
       memcpy(target_buffer, &arg_conv, sizeof(arg_conv));
       target_buffer += sizeof(arg_conv);
       target_buffer_used_size += sizeof(arg_conv);
 
       return push_parameters<T_IntegerNum, T_FloatNum>(
-        ctx,
-        target_buffer,
-        target_buffer_used_size,
-        reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
-        std::forward<T_ActualArgs>(args)...);
+          ctx, target_buffer, target_buffer_used_size,
+          reinterpret_cast<T_Ret (*)(T_FormalArgs...)>(0),
+          std::forward<T_ActualArgs>(args)...);
     }
   }
 
   bool m_switch_stacks;
   bool m_windows_mode;
-  char* sandbox_stack_pointer = nullptr;
-  char* curr_sandbox_stack_pointer = nullptr;
-  char* parameter_buffer = nullptr;
-  char* return_slot = nullptr;
+  char *sandbox_stack_pointer = nullptr;
+  char *curr_sandbox_stack_pointer = nullptr;
+  char *parameter_buffer = nullptr;
+  char *return_slot = nullptr;
 
 public:
-  void init(bool switch_stacks, bool windows_mode)
-  {
+  void init(bool switch_stacks, bool windows_mode) {
     m_switch_stacks = switch_stacks;
     m_windows_mode = windows_mode;
 
@@ -225,9 +199,10 @@ public:
       curr_sandbox_stack_pointer = sandbox_stack_pointer + stack_size;
       // keep stack 16 byte aligned
       curr_sandbox_stack_pointer -=
-        (reinterpret_cast<uintptr_t>(curr_sandbox_stack_pointer) % 16);
+          (reinterpret_cast<uintptr_t>(curr_sandbox_stack_pointer) % 16);
     }
-    // picking a parameter and return buffer of 4k arbitrarily. This should be sufficiently large for most things
+    // picking a parameter and return buffer of 4k arbitrarily. This should be
+    // sufficiently large for most things
     const uint64_t buffer_size = 16 * 1024 * 1024;
     parameter_buffer = new char[buffer_size];
     return_slot = new char[buffer_size];
@@ -237,8 +212,7 @@ public:
     }
   }
 
-  void destroy()
-  {
+  void destroy() {
     if (sandbox_stack_pointer != nullptr) {
       delete[] sandbox_stack_pointer;
     }
@@ -246,22 +220,22 @@ public:
     delete[] return_slot;
   }
 
-  template<typename T_Ret, typename... T_FormalArgs, typename... T_ActualArgs>
-  inline T_Ret func_call_no_class_ret(T_Ret (*fn_ptr)(T_FormalArgs...), T_ActualArgs&&... args)
-  {
-    char* stack_pointer = nullptr;
+  template <typename T_Ret, typename... T_FormalArgs, typename... T_ActualArgs>
+  inline T_Ret func_call_no_class_ret(T_Ret (*fn_ptr)(T_FormalArgs...),
+                                      T_ActualArgs &&...args) {
+    char *stack_pointer = nullptr;
     TransitionContext transition_in = {};
 
-    TransitionContext* prev_transition_context = saved_transition_context;
+    TransitionContext *prev_transition_context = saved_transition_context;
     saved_transition_context = &transition_in;
 
     if (m_switch_stacks) {
       if (prev_transition_context != nullptr) {
-          stack_pointer = (char*) prev_transition_context->source_stack_ptr;
-          // keep stack 16 byte aligned
-          stack_pointer -= (reinterpret_cast<uintptr_t>(stack_pointer) % 16);
+        stack_pointer = (char *)prev_transition_context->source_stack_ptr;
+        // keep stack 16 byte aligned
+        stack_pointer -= (reinterpret_cast<uintptr_t>(stack_pointer) % 16);
       } else {
-          stack_pointer = curr_sandbox_stack_pointer;
+        stack_pointer = curr_sandbox_stack_pointer;
       }
     }
 
@@ -270,7 +244,8 @@ public:
     }
 
     auto stack_param_size = push_parameters<0, 0>(
-      &transition_in, parameter_buffer, /* init_stack_param_size */ 0, fn_ptr, std::forward<T_ActualArgs>(args)...);
+        &transition_in, parameter_buffer, /* init_stack_param_size */ 0, fn_ptr,
+        std::forward<T_ActualArgs>(args)...);
 
     transition_in.target_stack_ptr = (uintptr_t)stack_pointer;
     transition_in.stack_params_buffer = parameter_buffer;
@@ -297,7 +272,7 @@ public:
                     "Class return handling error");
       abort();
     } else if constexpr (sizeof(T_Ret) > 8 && sizeof(T_Ret) <= 16) {
-      uint64_t result[] = { transition_in.rax, transition_in.rdx };
+      uint64_t result[] = {transition_in.rax, transition_in.rdx};
       T_Ret ret;
       memcpy(&ret, result, sizeof(result));
       return ret;
@@ -307,21 +282,24 @@ public:
     }
   }
 
-  template<typename T_Ret, typename... T_FormalArgs, typename... T_ActualArgs>
-  inline T_Ret func_call(T_Ret (*fn_ptr)(T_FormalArgs...), T_ActualArgs&&... args) {
-    // According to the x86 abi, class returns are processed as an out parameter before the actual function parameters
+  template <typename T_Ret, typename... T_FormalArgs, typename... T_ActualArgs>
+  inline T_Ret func_call(T_Ret (*fn_ptr)(T_FormalArgs...),
+                         T_ActualArgs &&...args) {
+    // According to the x86 abi, class returns are processed as an out parameter
+    // before the actual function parameters
     if constexpr (std::is_class_v<T_Ret>) {
-      using T_Conv = void(*)(char*, T_FormalArgs...);
+      using T_Conv = void (*)(char *, T_FormalArgs...);
       auto func_ptr_conv =
-        reinterpret_cast<T_Conv>(reinterpret_cast<uintptr_t>(fn_ptr));
-      func_call_no_class_ret(func_ptr_conv, return_slot, std::forward<T_ActualArgs>(args)...);
+          reinterpret_cast<T_Conv>(reinterpret_cast<uintptr_t>(fn_ptr));
+      func_call_no_class_ret(func_ptr_conv, return_slot,
+                             std::forward<T_ActualArgs>(args)...);
 
-      auto ptr = reinterpret_cast<T_Ret*>(return_slot);
+      auto ptr = reinterpret_cast<T_Ret *>(return_slot);
       T_Ret ret = *ptr;
       return ret;
     } else {
-      return func_call_no_class_ret(fn_ptr, std::forward<T_ActualArgs>(args)...);
+      return func_call_no_class_ret(fn_ptr,
+                                    std::forward<T_ActualArgs>(args)...);
     }
   }
-
 };
