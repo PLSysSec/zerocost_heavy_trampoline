@@ -82,12 +82,11 @@
         } TransitionContext;
 
         TransitionContext* get_saved_transition_context();
+        void set_saved_transition_context(TransitionContext* val);
 
         #ifdef __cplusplus
 
         }
-
-        extern thread_local TransitionContext* saved_transition_context;
 
         #define NACL_CHECK_FIELD(offset_val, field)                                           \
             static_assert(offset_val == __builtin_offsetof(TransitionContext, field));
@@ -197,12 +196,11 @@
         } TransitionContext;
 
         TransitionContext* get_saved_transition_context();
+        void set_saved_transition_context(TransitionContext* val);
 
         #ifdef __cplusplus
 
         }
-
-        extern thread_local TransitionContext* saved_transition_context;
 
         #define NACL_CHECK_FIELD(offset_val, field)                                           \
             static_assert(offset_val == __builtin_offsetof(TransitionContext, field));

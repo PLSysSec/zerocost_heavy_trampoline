@@ -234,8 +234,8 @@ public:
     char *stack_pointer = nullptr;
     TransitionContext transition_in = {};
 
-    TransitionContext *prev_transition_context = saved_transition_context;
-    saved_transition_context = &transition_in;
+    TransitionContext *prev_transition_context = get_saved_transition_context();
+    set_saved_transition_context(&transition_in);
 
     if (m_switch_stacks) {
       if (prev_transition_context != nullptr) {
@@ -265,7 +265,7 @@ public:
     transition_in.target_fcw = 0x37f;
 
     switch_execution_context(&transition_in);
-    saved_transition_context = prev_transition_context;
+    set_saved_transition_context(prev_transition_context);
 
     if constexpr (std::is_same_v<T_Ret, float> ||
                   std::is_same_v<T_Ret, double>) {
@@ -281,7 +281,7 @@ public:
       #endif
     } else if constexpr (std::is_same_v<T_Ret, void>) {
       return;
-    } else if constexpr (sizeof(T_Ret) > sizeof(uintptr_t)) {
+    } else if constexpr (sizeof(T_Ret) > 2 * sizeof(uintptr_t)) {
       // Should not occur as class returns have already been handled
       static_assert(switch_execution_detail::false_v<T_Ret>,
                     "Class return handling error");
