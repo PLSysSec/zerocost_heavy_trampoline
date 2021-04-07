@@ -76,8 +76,8 @@ class heavy_trampoline {
 
 private:
   template <typename T_Arg>
-  static inline uint64_t serialize_to_uint64(T_Arg arg) {
-    uint64_t val = 0;
+  static inline uintptr_t serialize_to_uintptr(T_Arg arg) {
+    uintptr_t val = 0;
     // memcpy will be removed by any decent compiler
     if constexpr (sizeof(T_Arg) <= 8) {
       memcpy(&val, &arg, sizeof(T_Arg));
@@ -112,8 +112,8 @@ private:
                   std::is_reference_v<T_FormalArg> ||
                   std::is_enum_v<T_FormalArg>) {
 
+      uintptr_t val = serialize_to_uintptr(arg_conv);
       if constexpr (T_IntegerNum < 6) {
-        uint64_t val = serialize_to_uint64(arg_conv);
         if constexpr (T_IntegerNum == 0) {
           ctx->rdi = val;
         } else if constexpr (T_IntegerNum == 1) {
@@ -128,9 +128,9 @@ private:
           ctx->r9 = val;
         }
       } else {
-        memcpy(target_buffer, &arg_conv, sizeof(arg_conv));
-        target_buffer += sizeof(arg_conv);
-        target_buffer_used_size += sizeof(arg_conv);
+        memcpy(target_buffer, &val, sizeof(val));
+        target_buffer += sizeof(val);
+        target_buffer_used_size += sizeof(val);
       }
 
       return push_parameters<T_IntegerNum + 1, T_FloatNum>(
@@ -141,8 +141,8 @@ private:
     } else if constexpr (std::is_same_v<T_FormalArg, float> ||
                          std::is_same_v<T_FormalArg, double>) {
 
+      uintptr_t val = serialize_to_uintptr(arg_conv);
       if constexpr (T_FloatNum < 8) {
-        uint64_t val = serialize_to_uint64(arg_conv);
         if constexpr (T_FloatNum == 0) {
           ctx->xmm0 = val;
         } else if constexpr (T_FloatNum == 1) {
@@ -161,9 +161,9 @@ private:
           ctx->xmm7 = val;
         }
       } else {
-        memcpy(target_buffer, &arg_conv, sizeof(arg_conv));
-        target_buffer += sizeof(arg_conv);
-        target_buffer_used_size += sizeof(arg_conv);
+        memcpy(target_buffer, &val, sizeof(val));
+        target_buffer += sizeof(val);
+        target_buffer_used_size += sizeof(val);
       }
 
       return push_parameters<T_IntegerNum, T_FloatNum + 1>(
@@ -173,9 +173,17 @@ private:
     } else
   #endif
     {
-      memcpy(target_buffer, &arg_conv, sizeof(arg_conv));
-      target_buffer += sizeof(arg_conv);
-      target_buffer_used_size += sizeof(arg_conv);
+      if constexpr (sizeof(arg_conv) < sizeof(uintptr_t)) {
+        // stack slot has min size of uintptr_t
+        uintptr_t padded_val = serialize_to_uintptr(arg_conv);
+        memcpy(target_buffer, &padded_val, sizeof(padded_val));
+        target_buffer += sizeof(padded_val);
+        target_buffer_used_size += sizeof(padded_val);
+      } else {
+        memcpy(target_buffer, &arg_conv, sizeof(arg_conv));
+        target_buffer += sizeof(arg_conv);
+        target_buffer_used_size += sizeof(arg_conv);
+      }
 
       return push_parameters<T_IntegerNum, T_FloatNum>(
           ctx, target_buffer, target_buffer_used_size,
