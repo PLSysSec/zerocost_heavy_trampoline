@@ -167,7 +167,7 @@ switch_execution_context_only_reg_params:
         movq    %rdx, REG_TMP_RET2
 
         // retrieve the param again
-        callq   get_saved_transition_context_with_last_set_key@PLT
+        callq   get_saved_transition_context@PLT
         movq    %rax, REG_PARAM
 
         /* Stage 1: Save relevant context_to state */

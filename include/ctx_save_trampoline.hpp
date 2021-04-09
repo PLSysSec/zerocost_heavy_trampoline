@@ -198,6 +198,7 @@ private:
   char *curr_sandbox_stack_pointer = nullptr;
   char *parameter_buffer = nullptr;
   char *return_slot = nullptr;
+  TransitionContext* call_stack_last_transition = nullptr;
 
 public:
   void init(bool switch_stacks, bool windows_mode) {
@@ -242,12 +243,18 @@ public:
     char *stack_pointer = nullptr;
     TransitionContext transition_in = {};
 
-    TransitionContext *prev_transition_context = get_saved_transition_context(this);
-    set_saved_transition_context(this, &transition_in);
+    // this is the transition to be used by the switch_execution_context_out code after the switch_execution_context runs
+    // this is global across all instances of heavy_weight_trampoline
+    TransitionContext* prev_saved_transition_context = get_saved_transition_context();
+    set_saved_transition_context(&transition_in);
+
+    // this is the transition from the current heavy_weight_trampoline call stack
+    TransitionContext* prev_call_stack_last_transition = call_stack_last_transition;
+    call_stack_last_transition = &transition_in;
 
     if (m_switch_stacks) {
-      if (prev_transition_context != nullptr) {
-        stack_pointer = (char *)prev_transition_context->source_stack_ptr;
+      if (prev_call_stack_last_transition != nullptr) {
+        stack_pointer = (char *)prev_call_stack_last_transition->source_stack_ptr;
         // keep stack 16 byte aligned
         stack_pointer -= (reinterpret_cast<uintptr_t>(stack_pointer) % 16);
       } else {
@@ -273,7 +280,8 @@ public:
     transition_in.target_fcw = 0x37f;
 
     switch_execution_context(&transition_in);
-    set_saved_transition_context(this, prev_transition_context);
+    set_saved_transition_context(prev_saved_transition_context);
+    call_stack_last_transition = prev_call_stack_last_transition;
 
     if constexpr (std::is_same_v<T_Ret, float> ||
                   std::is_same_v<T_Ret, double>) {

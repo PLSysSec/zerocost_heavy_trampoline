@@ -150,7 +150,7 @@ switch_execution_context_params_done:
         movl    %edx, REG_TMP_RET2
 
         // retrieve the param again
-        calll   get_saved_transition_context_with_last_set_key@PLT
+        calll   get_saved_transition_context@PLT
         movl    %eax, REG_PARAM
 
         /* Stage 1: Save relevant context_to state */
