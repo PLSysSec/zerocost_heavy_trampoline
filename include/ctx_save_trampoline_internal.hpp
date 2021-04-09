@@ -81,8 +81,9 @@
             /* end:     0x158 */
         } TransitionContext;
 
-        TransitionContext* get_saved_transition_context();
-        void set_saved_transition_context(TransitionContext* val);
+        TransitionContext* get_saved_transition_context(void* key);
+        void set_saved_transition_context(void* key, TransitionContext* val);
+        TransitionContext* get_saved_transition_context_with_last_set_key();
 
         #ifdef __cplusplus
 
@@ -195,8 +196,9 @@
             /* end:     0x54 */
         } TransitionContext;
 
-        TransitionContext* get_saved_transition_context();
-        void set_saved_transition_context(TransitionContext* val);
+        TransitionContext* get_saved_transition_context(void* key);
+        void set_saved_transition_context(void* key, TransitionContext* val);
+        TransitionContext* get_saved_transition_context_with_last_set_key();
 
         #ifdef __cplusplus
 

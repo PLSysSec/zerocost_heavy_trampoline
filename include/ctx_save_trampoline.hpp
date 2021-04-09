@@ -242,8 +242,8 @@ public:
     char *stack_pointer = nullptr;
     TransitionContext transition_in = {};
 
-    TransitionContext *prev_transition_context = get_saved_transition_context();
-    set_saved_transition_context(&transition_in);
+    TransitionContext *prev_transition_context = get_saved_transition_context(this);
+    set_saved_transition_context(this, &transition_in);
 
     if (m_switch_stacks) {
       if (prev_transition_context != nullptr) {
@@ -273,7 +273,7 @@ public:
     transition_in.target_fcw = 0x37f;
 
     switch_execution_context(&transition_in);
-    set_saved_transition_context(prev_transition_context);
+    set_saved_transition_context(this, prev_transition_context);
 
     if constexpr (std::is_same_v<T_Ret, float> ||
                   std::is_same_v<T_Ret, double>) {
