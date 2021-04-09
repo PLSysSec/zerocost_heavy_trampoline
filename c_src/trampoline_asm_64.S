@@ -1,5 +1,9 @@
 #include "ctx_save_trampoline_internal.hpp"
 
+#ifndef HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL
+#define HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL(x) x
+#endif
+
 /*
  * param1(rdi): TransitionContext*
  */
@@ -134,7 +138,7 @@ switch_execution_context_only_reg_params:
 
         // Load the target function ptr
         movq    TRANSITION_CONTEXT_OFFSET_TARGET_PROG_CTR(REG_PARAM), REG_PARAM
-        callq   *REG_PARAM
+        HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL(callq   *REG_PARAM)
 
         #undef REG_PARAM
         #undef REG_TMP_STACK_FRAME
@@ -252,3 +256,5 @@ switch_execution_context_out_non_windows:
         .balign 64
 fxrstor_default_state:
         .space 512
+
+#undef HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL

@@ -1,5 +1,9 @@
 #include "ctx_save_trampoline_internal.hpp"
 
+#ifndef HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL
+#define HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL(x) x
+#endif
+
 /*
  * param1(rdi): TransitionContext*
  */
@@ -110,7 +114,7 @@ switch_execution_context_params_done:
 
         // Load the target function ptr
         movl    TRANSITION_CONTEXT_OFFSET_TARGET_PROG_CTR(REG_PARAM), REG_PARAM
-        calll   *REG_PARAM
+        HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL(calll   *REG_PARAM)
 
         #undef REG_PARAM
         #undef REG_TMP_STACK_FRAME
@@ -245,3 +249,4 @@ frstor_default_state:
          */
         .space 108 - (7 * 4)
 
+#undef HEAVY_TRAMPOLINE_MODIFY_FUNCTION_CALL
